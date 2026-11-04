@@ -54,6 +54,7 @@ struct LegacyParticleSolver {
     bool loggedFrame = false;
     bool loggedReadback = false;
     bool loggedShapeRejection = false;
+    bool loggedConvexReduction = false;
     bool loggedFailure = false;
     const char* lastOperation = nullptr;
     std::unique_ptr<std::FILE, int (*)(std::FILE*)> recording{nullptr, std::fclose};

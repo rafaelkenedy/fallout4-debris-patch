@@ -273,6 +273,8 @@ void flexSetShapes(LegacyParticleSolver* state, const void* geometry, int geomet
         FlexHostTransfer planeTransfer(library, backend->buffers, 16);
         auto* entries = static_cast<const unsigned char*>(geometry);
         int accepted = 0;
+        int reducedFrom = 0;
+        int reducedInput = 0;
         for (int i = 0; i < shapeCount; ++i) {
             int distinctPlanes = 0;
             const int end = i + 1 < shapeCount ? starts[i + 1] : geometryCount;
@@ -291,6 +293,10 @@ void flexSetShapes(LegacyParticleSolver* state, const void* geometry, int geomet
                     state->loggedShapeRejection = true;
                 }
                 continue;
+            }
+            if (distinctPlanes > static_cast<int>(LegacyShapes::maxConvexPlanes)) {
+                reducedFrom = distinctPlanes;
+                reducedInput = limit - starts[i];
             }
             std::memcpy(pos12.data() + 4ull * accepted, positions + 4ull * i, 16);
             std::memcpy(rot12.data() + 4ull * accepted, rotations + 4ull * i, 16);
@@ -324,6 +330,14 @@ void flexSetShapes(LegacyParticleSolver* state, const void* geometry, int geomet
         backend->setShapes(state->solver, gb, pb, qb, ppb, pqb, fb, accepted);
         backend->wait(library);
         state->convexShapes = std::move(convexShapes);
+        if (runtimeLog && reducedFrom && !state->loggedConvexReduction) {
+            char message[160];
+            std::snprintf(message, sizeof(message),
+                "FleX D3D11 submitted reduced convex: input=%d, distinct=%d, retained=%zu.",
+                reducedInput, reducedFrom, LegacyShapes::maxConvexPlanes);
+            runtimeLog(message);
+            state->loggedConvexReduction = true;
+        }
     } catch (const std::bad_alloc&) {
         state->failed = true;
     }

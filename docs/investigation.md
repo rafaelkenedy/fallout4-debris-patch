@@ -82,9 +82,19 @@ diagnostic format.
   traces contained spans of 130 and 198 records. The adapter removes exact
   duplicates before checking its 63-plane limit. A synthetic 130-record
   convex reduced to six planes and retained its expected collision response.
-  The distinct plane counts of the live records are still unverified.
+  Larger sets are reduced to 63 original half-spaces using angular coverage.
+  The adapter rejects an unbounded reduction. On synthetic 130- and 198-plane
+  prisms, the maximum sampled radial expansion was 0.4623% and 0.4556%
+  respectively. A GPU particle contacted the reduced 130-plane prism at the
+  expected height. Those figures describe the synthetic fixtures. The
+  approximation and its cost still need validation on gameplay geometry.
   Unsupported shapes are skipped while valid shapes remain active.
-  Collision fidelity for those surfaces remains incomplete.
+- In a later Fallout 4 session on the RTX 3050, the adapter submitted a
+  convex with 123 input planes, all distinct, using 63 retained planes. The
+  log then recorded an active simulation step and successful particle
+  readback. Windows logged no Fallout 4 application failure or NVIDIA driver
+  event during the observed session. This verifies the submission path in
+  gameplay. Visual collision fidelity and frame time were not measured.
 - One session reported `0xC0000005` on process exit after the player reported
   closing the game normally. There was no new NVIDIA event 153 and no matching
   dump. The source of that exit code remains unverified.
@@ -95,3 +105,22 @@ diagnostic format.
 
 The original game binaries, dumps, recordings and machine-specific logs are
 excluded from the repository.
+
+## Legacy CUDA experiment
+
+REA identified three PTX payloads targeting `sm_30` in the original core DLL.
+The locally extracted payloads matched REA's SHA-256 digests. A standalone
+probe loaded all three through the installed NVIDIA driver API (13050) on the
+RTX 3050, bypassing the bundled CUDA 7.5 host runtime. The original
+`CalculateKeyDeltas` kernel returned `2, 4, 8, 16` for adjacent XORs of the
+input keys `1, 3, 7, 15, 31`. This verifies JIT loading and one kernel launch.
+The same probe launched the original `CollideShapes` kernel against one
+synthetic convex prism with 130 distinct planes. The particle at y=0.95
+produced one contact with a +Y normal, and the particle at y=1.30 produced
+zero contacts. Reducing the supplied count to 129 omitted the last plane
+(the top cap), and the second particle then produced one contact. This
+demonstrates that the legacy kernel used a plane beyond the FleX 1.2 convex
+API limit on the RTX 3050. It does not identify the first illegal memory
+access in gameplay or validate the complete legacy solver.
+
+The probe does not include or redistribute the extracted PTX.

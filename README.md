@@ -11,26 +11,11 @@ geometry and long sessions remains under test. Read the
 [investigation and validation report](docs/investigation.md) for the evidence and
 known limitations.
 
-## Try the patch
+## Install the patch
 
-1. Download the Windows x64 artifact from a successful GitHub Actions run.
-2. Extract the ZIP and close Fallout 4 and its launcher.
-3. Run the installer from PowerShell, using your game directory.
-
-```powershell
-./flex-compat-install.ps1 -Mode Install -GameDirectory 'D:\SteamLibrary\steamapps\common\Fallout 4'
-```
-
-The installer checks both original DLL hashes, saves verified copies in
-`flex-compat-original`, and installs the replacement DLLs and their separate
-runtime directory. Launch through Steam with Weapon Debris enabled. The runtime
-records initialization and the first simulation/readback in `flex-compat.log`.
-
-To restore the original DLLs, close the game and run:
-
-```powershell
-./flex-compat-install.ps1 -Mode Restore -GameDirectory 'D:\SteamLibrary\steamapps\common\Fallout 4'
-```
+Follow the [installation guide](docs/install.md) to download the Windows x64
+package, find your Steam game folder, enable Weapon Debris and verify the test.
+The guide also covers upgrading and restoring the original DLLs.
 
 ## Build and verify
 

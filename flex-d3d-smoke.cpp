@@ -7,8 +7,66 @@
 #include "flex-legacy-container.h"
 #include "flex-legacy-asset.h"
 #include "flex-legacy-mesh.h"
+#include "flex-legacy-shapes.h"
 
 static bool backendError;
+
+static bool CheckConvexInputs(NvFlexLibrary* library, const LegacySolverBackend& backend) {
+    FlexHostTransfer staging(library, backend.buffers, 16);
+    auto check = [&](const char* label, const std::vector<std::array<float, 4>>& planes,
+                     bool expected, int expectedDistinct) {
+        std::vector<std::unique_ptr<LegacyConvexMesh>> meshes;
+        NvFlexCollisionGeometry geometry{};
+        int flags = 0, distinct = 0;
+        const bool accepted = LegacyShapes::Convert(library, backend, staging,
+            reinterpret_cast<const unsigned char*>(planes.data()),
+            static_cast<int>(planes.size()), 2, geometry, flags, meshes, distinct);
+        const bool passed = accepted == expected && distinct == expectedDistinct;
+        printf("%s: %s (%zu records, %d distinct seen, %s)\n", label,
+               passed ? "PASS" : "FAIL", planes.size(), distinct,
+               accepted ? "accepted" : "rejected");
+        return passed;
+    };
+    const bool tetrahedron = check("Bounded tetrahedron",
+        {{-1,0,0,0}, {0,-1,0,0}, {0,0,-1,0}, {1,1,1,-1}}, true, 4);
+    const bool parallel = check("Four parallel planes",
+        {{1,0,0,-1}, {1,0,0,-2}, {1,0,0,-3}, {1,0,0,-4}}, false, 4);
+    bool oversized = true;
+    for (const int count : {130, 198}) {
+        std::vector<std::array<float, 4>> prism{{0,1,0,-1}, {0,-1,0,-1}};
+        for (int i = 0; i < count - 2; ++i) {
+            const float angle = 6.2831853f * i / (count - 2);
+            prism.push_back({std::cos(angle), 0, std::sin(angle), -1});
+        }
+        oversized = check("Oversized convex prism", prism, true, count) && oversized;
+        auto reduced = prism;
+        if (!LegacyShapes::ReduceConvex(reduced)) return false;
+        auto radius = [](const auto& planes, double x, double z) {
+            double result = 100;
+            for (const auto& plane : planes) {
+                const double projection = plane[0] * x + plane[2] * z;
+                if (projection > 0) result = std::min(result, -plane[3] / projection);
+            }
+            return result;
+        };
+        double maxExpansion = 0;
+        for (int i = 0; i < 1440; ++i) {
+            const double angle = 6.283185307179586 * i / 1440;
+            const double x = std::cos(angle), z = std::sin(angle);
+            const double expansion = radius(reduced, x, z) - radius(prism, x, z);
+            if (expansion < -1.e-6) return false;
+            maxExpansion = std::max(maxExpansion, expansion);
+        }
+        printf("Prism %d -> %zu planes: maximum sampled radial expansion %.4f%%\n",
+               count, reduced.size(), 100 * maxExpansion);
+        oversized = oversized && reduced.size() == 63 && maxExpansion < .01;
+        if (count == 130) {
+            prism.erase(prism.begin());
+            oversized = check("Unbounded prism without its top cap", prism, false, 129) && oversized;
+        }
+    }
+    return tetrahedron && parallel && oversized;
+}
 
 static void Report(int severity, const char* message,
                    const char* file, int line) {
@@ -103,6 +161,7 @@ int wmain(int argc, wchar_t** argv) {
     flexFree(host);
     puts("Legacy 120-byte host allocation initialized and freed.");
     auto* legacy = flexCreateSolver(64, 0, 48);
+    const bool convexInputs = CheckConvexInputs(library, backend);
     bool moved = false;
     if (legacy) {
         auto* solver = legacy->solver;
@@ -137,13 +196,13 @@ int wmain(int argc, wchar_t** argv) {
         const bool invalidRejected = !LegacyMeshReady(mesh);
         flexUpdateTriangleMesh(mesh, floor, faces, 4, 2, nullptr, nullptr, 0);
         const struct { LegacyTriangleMesh* handle; float scale; float padding; } triangle{mesh, .5f, 0};
-        float geometry[133][4]{
-            {}, {.5f, 0, 0, 0}, {.5f, .7f, 0, 0},
-            {1, 0, 0, -.5f}, {-1, 0, 0, -.5f}, {0, 1, 0, -.5f},
-            {0, -1, 0, -.5f}, {0, 0, 1, -.5f}, {0, 0, -1, -.5f}
-        };
-        for (int i = 9; i < 133; ++i) {
-            std::memcpy(geometry[i], geometry[3 + (i - 3) % 6], sizeof(geometry[i]));
+        float geometry[133][4]{{}, {.5f, 0, 0, 0}, {.5f, .7f, 0, 0},
+                              {0, 1, 0, -.5f}, {0, -1, 0, -.5f}};
+        for (int i = 0; i < 128; ++i) {
+            const float angle = 6.2831853f * i / 128;
+            geometry[5 + i][0] = std::cos(angle);
+            geometry[5 + i][2] = std::sin(angle);
+            geometry[5 + i][3] = -.5f;
         }
         static_assert(sizeof(triangle) == sizeof(geometry[0]));
         std::memcpy(geometry[0], &triangle, sizeof(triangle));
@@ -284,5 +343,5 @@ int wmain(int argc, wchar_t** argv) {
     flexShutdown();
     BindLegacySolverBackend(nullptr);
     FreeLibrary(dll);
-    return moved && !backendError ? 0 : 1;
+    return moved && convexInputs && !backendError ? 0 : 1;
 }
