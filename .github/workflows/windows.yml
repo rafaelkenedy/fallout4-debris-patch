@@ -83,6 +83,8 @@ jobs:
           $cuda = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8'
           if (!(Test-Path "$cuda/bin/nvcc.exe")) { throw 'CUDA compiler was not installed.' }
           "CUDA_PATH=$cuda" >> $env:GITHUB_ENV
+          "CUDA_PATH_V12_8=$cuda" >> $env:GITHUB_ENV
+          "CudaToolkitDir=$cuda\" >> $env:GITHUB_ENV
           "$cuda\bin" >> $env:GITHUB_PATH
       - name: Build pinned PhysX and the bridge
         shell: pwsh
