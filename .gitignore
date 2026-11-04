@@ -1,0 +1,8 @@
+/flex-sdk-reference/
+/flex-compat-stage/
+/dist/
+*.exe
+*.dll
+*.log
+*.dmp
+*.mp4

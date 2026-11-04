@@ -1,0 +1,51 @@
+name: Windows patch
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Fetch pinned NVIDIA SDK
+        shell: pwsh
+        run: |
+          git init flex-sdk-reference
+          git -C flex-sdk-reference fetch --depth 1 https://github.com/NVIDIAGameWorks/FleX.git b1ea0f87b72582649c935d53fd8531b1e7335160
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          git -C flex-sdk-reference checkout --detach FETCH_HEAD
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build and audit DLLs
+        shell: pwsh
+        run: |
+          $mingw = 'C:/mingw64/bin'
+          ./build-flex-compat.ps1 -Compiler "$mingw/g++.exe"
+          ./verify-flex-compat.ps1 -Objdump "$mingw/objdump.exe"
+      - name: Compile the hardware tests
+        shell: pwsh
+        run: |
+          $compiler = 'C:/mingw64/bin/g++.exe'
+          & $compiler -std=c++17 -O2 -static -municode -I ./flex-sdk-reference/include flex-d3d-smoke.cpp flex-legacy-particles.cpp flex-legacy-container.cpp flex-legacy-asset.cpp flex-legacy-mesh.cpp -o flex-d3d-smoke.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $compiler -std=c++17 -O2 -static -municode -I ./flex-sdk-reference/include flex-compat-loader-test.cpp -o flex-compat-loader-test.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Compress-Archive -Path flex-compat-stage,flex-compat-install.ps1,README.md,docs -DestinationPath dist/fallout4-debris-patch.zip
+          $hash = (Get-FileHash dist/fallout4-debris-patch.zip).Hash.ToLowerInvariant()
+          "$hash  fallout4-debris-patch.zip" | Set-Content dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fallout4-debris-patch-windows-x64
+          path: dist/*
+          if-no-files-found: error

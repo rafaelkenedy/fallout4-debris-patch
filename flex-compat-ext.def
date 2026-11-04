@@ -1,0 +1,8 @@
+LIBRARY flexExtRelease_x64
+EXPORTS
+    flexExtCreateContainer=flexRelease_x64.flexExtCreateContainer
+    flexExtCreateRigidFromMesh=flexRelease_x64.flexExtCreateRigidFromMesh
+    flexExtDestroyAsset=flexRelease_x64.flexExtDestroyAsset
+    flexExtDestroyContainer=flexRelease_x64.flexExtDestroyContainer
+    flexExtGetParticleData=flexRelease_x64.flexExtGetParticleData
+    flexExtSetForceFields=flexRelease_x64.flexExtSetForceFields
