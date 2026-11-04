@@ -274,18 +274,19 @@ void flexSetShapes(LegacyParticleSolver* state, const void* geometry, int geomet
         auto* entries = static_cast<const unsigned char*>(geometry);
         int accepted = 0;
         for (int i = 0; i < shapeCount; ++i) {
+            int distinctPlanes = 0;
             const int end = i + 1 < shapeCount ? starts[i + 1] : geometryCount;
             const int limit = (flags[i] & 7) == 2 ? end : starts[i] + 1;
             if (starts[i] < 0 || starts[i] >= geometryCount || limit <= starts[i] ||
                 limit > geometryCount ||
                 !LegacyShapes::Convert(library, *backend, planeTransfer,
                     entries + 16ull * starts[i], limit - starts[i], flags[i],
-                    shapes[accepted], flags12[accepted], convexShapes)) {
+                    shapes[accepted], flags12[accepted], convexShapes, distinctPlanes)) {
                 if (runtimeLog && !state->loggedShapeRejection) {
                     char message[160];
                     std::snprintf(message, sizeof(message),
-                        "FleX D3D11 skipped shape: flags=%#x, index=%d, end=%d, geometry=%d.",
-                        static_cast<unsigned>(flags[i]), starts[i], end, geometryCount);
+                        "FleX D3D11 skipped shape: flags=%#x, index=%d, end=%d, geometry=%d, distinct planes seen=%d.",
+                        static_cast<unsigned>(flags[i]), starts[i], end, geometryCount, distinctPlanes);
                     runtimeLog(message);
                     state->loggedShapeRejection = true;
                 }

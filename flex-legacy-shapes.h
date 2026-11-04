@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include "flex-legacy-mesh.h"
 #include "flex-legacy-particles.h"
@@ -70,7 +71,8 @@ inline bool ConvexBounds(const std::vector<float>& planes, float* lower, float* 
 inline bool Convert(NvFlexLibrary* library, const LegacySolverBackend& backend,
                     FlexHostTransfer& planeTransfer, const unsigned char* record,
                     int planeCount, int oldFlags, NvFlexCollisionGeometry& shape, int& newFlags,
-                    std::vector<std::unique_ptr<LegacyConvexMesh>>& convexShapes) {
+                    std::vector<std::unique_ptr<LegacyConvexMesh>>& convexShapes,
+                    int& distinctPlanes) {
     NvFlexCollisionShapeType modernType;
     switch (oldFlags & 7) {
     case 0:
@@ -89,20 +91,40 @@ inline bool Convert(NvFlexLibrary* library, const LegacySolverBackend& backend,
         break;
     }
     case 2: {
-        if (planeCount < 4 || planeCount >= 64 || !backend.createConvexMesh ||
+        if (planeCount < 4 || !backend.createConvexMesh ||
             !backend.updateConvexMesh || !backend.destroyConvexMesh) return false;
-        std::vector<float> planes(4 * planeCount);
-        std::memcpy(planes.data(), record, 16ull * planeCount);
+        constexpr std::size_t maxPlanes = 63;
+        std::vector<std::array<float, 4>> unique;
+        unique.reserve(std::min<std::size_t>(planeCount, maxPlanes));
+        for (int i = 0; i < planeCount; ++i) {
+            std::array<float, 4> plane{};
+            std::memcpy(plane.data(), record + 16ull * i, 16);
+            if (!std::all_of(plane.begin(), plane.end(), [](float value) {
+                return std::isfinite(value);
+            })) return false;
+            if (std::find(unique.begin(), unique.end(), plane) != unique.end()) continue;
+            if (unique.size() == maxPlanes) {
+                distinctPlanes = static_cast<int>(maxPlanes + 1);
+                return false;
+            }
+            unique.push_back(plane);
+        }
+        if (unique.size() < 4) return false;
+        std::vector<float> planes;
+        planes.reserve(unique.size() * 4);
+        for (const auto& plane : unique) planes.insert(planes.end(), plane.begin(), plane.end());
+        const int count = static_cast<int>(unique.size());
+        distinctPlanes = count;
         float lower[3]{}, upper[3]{};
         if (!ConvexBounds(planes, lower, upper)) return false;
-        auto* buffer = planeTransfer.Stage(planes.data(), planeCount);
+        auto* buffer = planeTransfer.Stage(planes.data(), count);
         if (!buffer) return false;
         auto mesh = std::make_unique<LegacyConvexMesh>();
         mesh->library = library;
         mesh->destroy = backend.destroyConvexMesh;
         mesh->id = backend.createConvexMesh(library);
         if (!mesh->id) return false;
-        backend.updateConvexMesh(library, mesh->id, buffer, planeCount, lower, upper);
+        backend.updateConvexMesh(library, mesh->id, buffer, count, lower, upper);
         backend.wait(library);
         shape.convexMesh.mesh = mesh->id;
         shape.convexMesh.scale[0] = shape.convexMesh.scale[1] = shape.convexMesh.scale[2] = 1;

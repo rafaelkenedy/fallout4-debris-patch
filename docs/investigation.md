@@ -77,7 +77,12 @@ diagnostic format.
   on two solvers. A roughly 20-second recording showed fragments separating
   from the impact dust after shots against rocks, with no gameplay crash
   visible in the clip.
-- Some game convex records exceeded the SDK adapter's 63-plane limit.
+- The original kernel walks convex plane records from a shape's start index
+  to the next start index, or the geometry count for the last shape. Live
+  traces contained spans of 130 and 198 records. The adapter removes exact
+  duplicates before checking its 63-plane limit. A synthetic 130-record
+  convex reduced to six planes and retained its expected collision response.
+  The distinct plane counts of the live records are still unverified.
   Unsupported shapes are skipped while valid shapes remain active.
   Collision fidelity for those surfaces remains incomplete.
 - One session reported `0xC0000005` on process exit after the player reported

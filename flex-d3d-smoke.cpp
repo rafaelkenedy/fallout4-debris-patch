@@ -137,11 +137,14 @@ int wmain(int argc, wchar_t** argv) {
         const bool invalidRejected = !LegacyMeshReady(mesh);
         flexUpdateTriangleMesh(mesh, floor, faces, 4, 2, nullptr, nullptr, 0);
         const struct { LegacyTriangleMesh* handle; float scale; float padding; } triangle{mesh, .5f, 0};
-        float geometry[9][4]{
+        float geometry[133][4]{
             {}, {.5f, 0, 0, 0}, {.5f, .7f, 0, 0},
             {1, 0, 0, -.5f}, {-1, 0, 0, -.5f}, {0, 1, 0, -.5f},
             {0, -1, 0, -.5f}, {0, 0, 1, -.5f}, {0, 0, -1, -.5f}
         };
+        for (int i = 9; i < 133; ++i) {
+            std::memcpy(geometry[i], geometry[3 + (i - 3) % 6], sizeof(geometry[i]));
+        }
         static_assert(sizeof(triangle) == sizeof(geometry[0]));
         std::memcpy(geometry[0], &triangle, sizeof(triangle));
         const float origins[4][4]{{}, {20,0,0,0}, {25,0,0,0}, {30,0,0,0}};
@@ -183,7 +186,7 @@ int wmain(int argc, wchar_t** argv) {
             params.adhesion = 0;
             params.sleepThreshold = 0;
             flexSetParams(legacy, &params);
-            flexSetShapes(legacy, geometry, 9, nullptr, nullptr, starts,
+            flexSetShapes(legacy, geometry, static_cast<int>(std::size(geometry)), nullptr, nullptr, starts,
                           origins[0], rotations[0], nullptr, nullptr, flags, 4, 2);
             std::memcpy(hostPositions, initial, sizeof(initial));
             std::memcpy(hostVelocities, velocities, sizeof(velocities));
