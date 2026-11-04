@@ -4,10 +4,8 @@ Setup targets **Fallout 4 Steam 1.11.240.0 on Windows x64** and requires an
 NVIDIA GPU with a compatible CUDA driver. The RTX 3050 was tested. The
 PhysX backend is experimental and explosion force fields remain pending.
 
-1. Sign in to GitHub and open a successful
-   [Windows patch workflow run](https://github.com/rafaelkenedy/fallout4-debris-patch/actions/workflows/windows.yml)
-   for the `experimental/physx-exclusive` branch. Download the artifact
-   named `fallout4-debris-physx-setup-windows-x64` and extract it.
+1. Sign in to GitHub and download `Fallout4DebrisSetup.exe` and its checksum
+   from the [latest release](https://github.com/rafaelkenedy/fallout4-debris-patch/releases/latest).
 2. Close Fallout 4 and its launcher. Run `Fallout4DebrisSetup.exe`. It
    searches the Steam registry, library folders and the game's Steam
    manifest. If necessary, use **Browse** to pick the directory containing

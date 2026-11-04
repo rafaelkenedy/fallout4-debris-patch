@@ -1,8 +1,7 @@
-# Fallout 4 Weapon Debris on Direct3D 11
+# Fallout 4 Weapon Debris Patch
 
-An experimental Windows x64 compatibility layer for the Steam build of Fallout 4
-1.11.240.0. It keeps Weapon Debris enabled and routes the game's legacy FleX calls
-through NVIDIA FleX 1.2's Direct3D 11 backend.
+A Windows x64 compatibility layer for Steam Fallout 4 1.11.240.0. The
+recommended PhysX backend runs Weapon Debris on NVIDIA PhysX 5.9 with CUDA.
 
 The prototype ran inside Fallout 4 on a GeForce RTX 3050. The runtime log recorded
 active simulation and particle readback, and a recorded gameplay test showed
@@ -11,16 +10,17 @@ geometry and long sessions remains under test. Read the
 [investigation and validation report](docs/investigation.md) for the evidence and
 known limitations.
 
-## Install the patch
+## Install the PhysX patch
 
-Follow the [installation guide](docs/install.md) to download the Windows x64
-package, find your Steam game folder, enable Weapon Debris and verify the test.
-The guide also covers upgrading and restoring the original DLLs.
+Download `Fallout4DebrisSetup.exe` from the [latest release](https://github.com/rafaelkenedy/fallout4-debris-patch/releases/latest).
+Setup detects Steam libraries, includes the runtime and can restore the
+original game DLLs. See the [installation guide](docs/install-physx.md) for
+supported hardware, setup and verification.
 
-For the experimental PhysX-only backend, use
-[`Fallout4DebrisSetup.exe`](docs/install-physx.md). The self-contained
-installer detects Steam libraries, includes the runtime and can restore
-the original game DLLs.
+## Legacy D3D11 backend
+
+The FleX D3D11 build is **deprecated**. Its
+[installation guide](docs/install.md) remains available for existing users.
 
 ## Build and verify
 
