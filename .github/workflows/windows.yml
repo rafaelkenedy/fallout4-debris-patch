@@ -49,3 +49,72 @@ jobs:
           name: fallout4-debris-patch-windows-x64
           path: dist/*
           if-no-files-found: error
+
+  installer:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: windows-2022
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: fallout4-debris-patch-windows-x64
+          path: adapter-package
+      - name: Prepare the adapter DLLs
+        shell: pwsh
+        run: Expand-Archive adapter-package/fallout4-debris-patch.zip adapter-package/unpacked
+      - name: Install CUDA build tools
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'cuda-12.8.1-network.exe'
+          Invoke-WebRequest 'https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe' -OutFile $installer
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'NVIDIA') {
+            throw 'CUDA installer signature verification failed.'
+          }
+          $process = Start-Process -FilePath $installer -ArgumentList '-s','nvcc_12.8','cudart_12.8','visual_studio_integration_12.8' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -notin 0,3010) { throw "CUDA installer exited $($process.ExitCode)." }
+          $cuda = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8'
+          if (!(Test-Path "$cuda/bin/nvcc.exe")) { throw 'CUDA compiler was not installed.' }
+          "CUDA_PATH=$cuda" >> $env:GITHUB_ENV
+          "$cuda\bin" >> $env:GITHUB_PATH
+      - name: Build pinned PhysX and the bridge
+        shell: pwsh
+        run: |
+          git init physx-sdk-reference
+          git -C physx-sdk-reference fetch --depth 1 https://github.com/NVIDIA-Omniverse/PhysX.git 517a0073715120e114ee055b63b26c95e00d9039
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          git -C physx-sdk-reference checkout --detach FETCH_HEAD
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Push-Location physx-sdk-reference/physx
+          try {
+            ./generate_projects.bat vc17win64
+            if (!(Test-Path compiler/vc17win64/PhysXSDK.sln)) { throw 'PhysX solution was not generated.' }
+            cmake --build compiler/vc17win64 --config release --target PhysX PhysXCooking PhysXExtensions PhysXGpu -- /m:4
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
+          $sdk = (Resolve-Path physx-sdk-reference/physx).Path
+          $bin = Join-Path $sdk 'bin/win.x86_64.vc143.md/release'
+          cmake -S experiments -B physx-debris-build -G 'Visual Studio 17 2022' -A x64 "-DPHYSX_SDK=$sdk" "-DPHYSX_BIN=$bin"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build physx-debris-build --config Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build self-contained Windows installer
+        shell: pwsh
+        run: |
+          ./build-physx-installer.ps1 -PhysXSdk physx-sdk-reference -BridgeBin physx-debris-build/Release -PatchStage adapter-package/unpacked/flex-compat-stage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fallout4-debris-physx-setup-windows-x64
+          path: |
+            dist/Fallout4DebrisSetup.exe
+            dist/Fallout4DebrisSetup.sha256
+          if-no-files-found: error

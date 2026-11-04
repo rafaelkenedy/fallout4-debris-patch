@@ -17,8 +17,10 @@ Follow the [installation guide](docs/install.md) to download the Windows x64
 package, find your Steam game folder, enable Weapon Debris and verify the test.
 The guide also covers upgrading and restoring the original DLLs.
 
-For the experimental PhysX-only backend, see the
-[PhysX build and test instructions](experiments/README.md).
+For the experimental PhysX-only backend, use
+[`Fallout4DebrisSetup.exe`](docs/install-physx.md). The self-contained
+installer detects Steam libraries, includes the runtime and can restore
+the original game DLLs.
 
 ## Build and verify
 

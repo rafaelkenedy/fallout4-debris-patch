@@ -26,6 +26,10 @@ need gameplay validation.
 
 ### Build and install locally
 
+For a single-file installer, use the
+[PhysX setup guide](../docs/install-physx.md). The manual procedure below
+is useful when iterating on a development build.
+
 1. Build the PhysX SDK and the bridge using the [Windows x64 commands below](#build-on-windows-x64).
    Use CUDA Toolkit 12.8 for the pinned SDK. The local test used CUDA 12.8
    with NVIDIA display driver 621.01.
@@ -60,8 +64,9 @@ marker, and rename `flex-compat-runtime.disabled` back to
 `flex-compat-runtime`. To restore the original game DLLs, use the standard
 installer's [restore command](../docs/install.md#restore-or-upgrade).
 
-The existing Windows CI builds the compatibility layer. This PhysX
-configuration is built and tested locally with MSVC and CUDA.
+The Windows workflow builds the compatibility layer, then compiles and
+packages this PhysX configuration into Setup. GPU tests run on a local
+CUDA-capable machine.
 
 ## Collision and solver tests
 
