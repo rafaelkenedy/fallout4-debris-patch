@@ -1,5 +1,8 @@
 # Install the Fallout 4 Weapon Debris patch
 
+> The FleX D3D11 backend is deprecated. For new installations, use the
+> [PhysX installer](install-physx.md).
+
 The packaged patch targets **Windows x64 with Steam Fallout 4 1.11.240.0**
 and requires a Direct3D 11-capable GPU and driver. Gameplay has been tested
 on a GeForce RTX 3050. Other GPUs, game versions, storefronts, and Linux

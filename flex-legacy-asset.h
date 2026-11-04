@@ -17,6 +17,7 @@ struct LegacyRigidAsset {
 
 void BindLegacyAssetBackend(decltype(&NvFlexExtCreateRigidFromMesh) create,
                             decltype(&NvFlexExtDestroyAsset) destroy);
+void EnableHostRigidAssets();
 
 extern "C" {
 LegacyRigidAsset* flexExtCreateRigidFromMesh(const float* vertices, int vertexCount,

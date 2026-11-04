@@ -1,6 +1,7 @@
 #pragma once
 
 #include "flex-triangle-transfer.h"
+#include "experiments/physx-scene-shapes.h"
 
 struct LegacyTriangleMesh;
 
@@ -14,6 +15,8 @@ struct LegacyMeshApi {
 void BindLegacyMeshApi(const LegacyMeshApi* api);
 NvFlexTriangleMeshId NativeMeshId(const LegacyTriangleMesh* mesh);
 bool LegacyMeshReady(const LegacyTriangleMesh* mesh);
+void EnableLegacyMeshCapture();
+bool DescribeLegacyMesh(const LegacyTriangleMesh* mesh, PhysXSceneShape& shape);
 
 extern "C" {
 LegacyTriangleMesh* flexCreateTriangleMesh();

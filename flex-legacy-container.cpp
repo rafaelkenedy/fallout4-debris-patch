@@ -32,6 +32,7 @@ void flexExtSetForceFields(LegacyFlexContainer* container, const LegacyForceFiel
     if (!container) return;
     auto& state = *container->solver;
     if (state.failed) return;
+    TraceLegacyCall(&state, __func__, count, memory);
     state.lastOperation = __func__;
     if (count == 0) {
         state.forceFields.clear();

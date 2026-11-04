@@ -1,6 +1,9 @@
 #include <windows.h>
 #include <cstdio>
 #include <filesystem>
+#include <string_view>
+#include "flex-legacy-asset.h"
+#include "flex-legacy-mesh.h"
 #include "flex-legacy-container.h"
 #include "flex-legacy-particles.h"
 
@@ -9,7 +12,8 @@ static void Report(int level, const char* message, const char*, int) {
 }
 
 int wmain(int argc, wchar_t** argv) {
-    if (argc != 2) return 2;
+    const bool physxOnly = argc == 3 && std::wstring_view(argv[2]) == L"--physx-only";
+    if (argc != 2 && !physxOnly) return 2;
     const auto stage = std::filesystem::absolute(argv[1]);
     constexpr DWORD flags = LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32;
     auto core = LoadLibraryExW((stage / L"flexRelease_x64.dll").c_str(), nullptr, flags);
@@ -34,8 +38,30 @@ int wmain(int argc, wchar_t** argv) {
     LOAD(ext, flexExtCreateContainer);
     LOAD(ext, flexExtGetParticleData);
     LOAD(ext, flexExtDestroyContainer);
+    LOAD(ext, flexExtCreateRigidFromMesh);
+    LOAD(ext, flexExtDestroyAsset);
+    LOAD(core, flexCreateTriangleMesh);
+    LOAD(core, flexUpdateTriangleMesh);
+    LOAD(core, flexDestroyTriangleMesh);
 #undef LOAD
     if (flexInit(90, Report, -1) != 0) return 1;
+    if (physxOnly) {
+        if (!GetModuleHandleW(L"PhysXGpu_64.dll") ||
+            GetModuleHandleW(L"NvFlexReleaseD3D_x64.dll") ||
+            GetModuleHandleW(L"NvFlexExtReleaseD3D_x64.dll") ||
+            GetModuleHandleW(L"cudart64_75.dll")) return 1;
+        const FlexPoint points[]{{0,0,0}, {1,0,0}, {0,1,0}, {0,0,1}};
+        const int triangles[]{0,2,1, 0,1,3, 0,3,2, 1,2,3};
+        auto* asset = flexExtCreateRigidFromMesh(reinterpret_cast<const float*>(points), 4, triangles, 12, 0.1f, 0);
+        if (!asset || asset->shapeCount != 1 || asset->particleCount != 4 ||
+            asset->shapeOffsets[1] != asset->particleCount) return 1;
+        flexExtDestroyAsset(asset);
+        auto* mesh = flexCreateTriangleMesh();
+        if (!mesh) return 1;
+        flexUpdateTriangleMesh(mesh, points, triangles, 4, 4, nullptr, nullptr, 0);
+        flexDestroyTriangleMesh(mesh);
+        std::puts("PhysX-only module check and host asset path passed.");
+    }
     constexpr int capacity = 32768;
     auto* solver = flexCreateSolver(capacity, 0, 64);
     if (!solver) return 1;
