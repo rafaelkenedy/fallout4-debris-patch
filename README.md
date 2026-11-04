@@ -17,6 +17,9 @@ Follow the [installation guide](docs/install.md) to download the Windows x64
 package, find your Steam game folder, enable Weapon Debris and verify the test.
 The guide also covers upgrading and restoring the original DLLs.
 
+For the experimental PhysX-only backend, see the
+[PhysX build and test instructions](experiments/README.md).
+
 ## Build and verify
 
 Use a Windows x64 MinGW-w64 compiler and the NVIDIA FleX SDK at the commit pinned

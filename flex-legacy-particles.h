@@ -56,6 +56,25 @@ struct LegacyParticleSolver {
     bool loggedShapeRejection = false;
     bool loggedConvexReduction = false;
     bool loggedFailure = false;
+    void* physxProbe = nullptr;
+    void* physxExclusive = nullptr;
+    unsigned physxFrames = 0;
+    int physxParticle = -1;
+    float physxPosition[3]{};
+    bool loggedPhysXOutput = false;
+    std::vector<float> physxInputPositions, physxInputVelocities;
+    std::vector<float> physxOutputPositions, physxOutputVelocities;
+    std::vector<float> physxRigidRotations, physxRigidTranslations;
+    bool physxRigidsReady = false;
+    bool physxRigidOutputReady = false;
+    bool loggedPhysXPositions = false;
+    bool loggedPhysXVelocities = false;
+    bool loggedPhysXShapes = false;
+    int rigidCount = 0;
+    unsigned traceCalls = 0;
+    unsigned traceRigidCalls = 0;
+    bool traceActivityStarted = false;
+    unsigned traceFrame = 0;
     const char* lastOperation = nullptr;
     std::unique_ptr<std::FILE, int (*)(std::FILE*)> recording{nullptr, std::fclose};
     LegacyFlexParams lastParams{};
@@ -106,6 +125,9 @@ struct LegacySolverBackend {
 void BindLegacySolverBackend(const LegacySolverBackend* backend);
 void BindLegacyRuntimeLog(void (*log)(const char*));
 NvFlexLibrary* LegacySolverLibrary();
+bool LegacyPhysXExclusive();
+void TraceLegacyCall(LegacyParticleSolver* state, const char* operation, int count, int detail = 0,
+                     bool rigid = false);
 
 extern "C" {
 using LegacyFlexError = void (*)(int, const char*, const char*, int);
